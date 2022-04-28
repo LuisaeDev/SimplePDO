@@ -1,0 +1,18 @@
+{
+    "name": "luisaedev/simple-pdo",
+    "description": "Pretty simple and fancy class for handle PDO connections and PDO statements using just one class",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "LuisaeDev\\SimplePDO\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Luis Aguilar",
+            "email": "dev@luisae.com"
+        }
+    ],
+    "require": {}
+}
