@@ -4,6 +4,7 @@ namespace LuisaeDev\SimplePDO;
 
 use PDO;
 use PDOStatement;
+use PDOException;
 
 /**
  * Pretty simple and fancy class for handle PDO connections and PDO statements using just one class.
@@ -24,56 +25,46 @@ class SimplePDO {
 	/** @var array|string Store the connection data */
 	private $connectionData = null;
 
+	/** @var string DSN connection string */
+	private $dsn;
+
 	/** @var bool Flag, define if the transaction is auto committed */
 	private $autocommit = true;
 
 	/**
 	 * Constructor.
 	 *
-	 * @param mixed $connectionData String connection or array with connection data
+	 * @param array  $connectionData Array with connection data values
+	 * @param string $dsn            Template of the DSN string. Variables expressed like $var will be replaced
 	 *
-	 * @throws Exceptions\SimplePDOException
+	 * @throws PDOException
 	 */
-	public function __construct(mixed $connectionData)
+	public function __construct(array $connectionData, string $dsnTemplate = '$driver:host=$host;port=$port;dbname=$dbname;charset=utf8')
 	{
 
-		// If connection data is an array
-		if (is_array($connectionData)) {
+		// Merge the connection default data
+		$connectionData = array_merge([
+			'dbname'   => '',
+			'user'     => 'root',
+			'password' => '',
+			'driver'   => 'mysql',
+			'host'     => '127.0.0.1',
+			'port'     => '3306'
+		], $connectionData);
+		
+		// Build and save the DSN connection string
+		$dsnTemplate = str_replace('$driver', $connectionData['driver'], $dsnTemplate);
+		$dsnTemplate = str_replace('$host', $connectionData['host'], $dsnTemplate);
+		$dsnTemplate = str_replace('$port', $connectionData['port'], $dsnTemplate);
+		$dsnTemplate = str_replace('$dbname', $connectionData['dbname'], $dsnTemplate);
+		$this->dsn = $dsnTemplate;
 
-			// Merge the connection default data
-			$connectionData = array_merge([
-				'user'     => '',
-				'password' => '',
-				'driver'   => 'mysql',
-				'host'     => '127.0.0.1',
-				'port'     => '3306'
-			], $connectionData);
-			
-			// Check if the database name was not specified
-			if (!isset($connectionData['dbname'])) {
-				throw new Exceptions\SimplePDOException('Database name not specified', 1);
-			}
+		// Create the PDO instance
+		$this->pdoInstance = new PDO($this->dsn, $connectionData['user'], $connectionData['password']);
 
-			// Create the PDO instance
-			switch ($connectionData['driver']) {
-				case 'mysql':
-					$this->pdoInstance = new PDO('mysql:host=' . $connectionData['host'] . ';port=' . $connectionData['port'] . ';dbname=' . $connectionData['dbname'] . ';charset=utf8', $connectionData['user'], $connectionData['password']);
-					break;
-
-				default:
-					throw new Exceptions\SimplePDOException('Driver not supported', 2);
-					break;
-			}
-
-			// Remove the password from the connection data
-			unset($connectionData['password']);
-
-		// If connection data is a string
-		} else {
-			$this->pdoInstance = new PDO($connectionData);
-		}
-
-		// Save the connection data
+		// Remove the username and password and save the connection data
+		unset($connectionData['user']);
+		unset($connectionData['password']);
 		$this->connectionData = $connectionData;
 
 		// Enable reports and exceptions for the PDO instance
@@ -181,7 +172,7 @@ class SimplePDO {
 	 *
 	 * @return SimplePDO Self instance for chain
 	 */
-	public function bind(string $name, mixed $value, mixed $type)
+	public function bind(string $name, mixed $value, string $type)
 	{
 
 		switch ($type) {
@@ -198,6 +189,7 @@ class SimplePDO {
 				break;
 
 			case 'str':
+			default:
 				$type = PDO::PARAM_STR;
 				break;
 		}
@@ -222,6 +214,8 @@ class SimplePDO {
 	 * Execute the current statement.
 	 *
 	 * @return SimplePDO Self instance for chain
+	 * 
+	 * @throws PDOException
 	 */
 	public function execute()
 	{
@@ -262,14 +256,12 @@ class SimplePDO {
 	/**
 	 * Fetch and return an array with all results.
 	 *
-	 * @param bool $assoc Define if the result is going to be fecth as an associative array
-	 * 
-	 * @return array
+	 * @return array All results obtained
 	 */
-	public function fetchAll(bool $assoc = false)
+	public function fetchAll()
 	{
 		if ((gettype($this->pdoStm) == 'object') && (method_exists($this->pdoStm, 'fetchAll'))) {
-			return $this->pdoStm->fetchAll($assoc ? PDO::FETCH_ASSOC : PDO::FETCH_BOTH);
+			return $this->pdoStm->fetchAll(PDO::FETCH_ASSOC);
 		} else {
 			return [];
 		}
@@ -292,7 +284,7 @@ class SimplePDO {
 	/**
 	 * Return the last inserted ID.
 	 *
-	 * @return mixed|null
+	 * @return mixed|null Last inserted ID or null
 	 */
 	public function lastInsertId()
 	{
@@ -310,7 +302,7 @@ class SimplePDO {
 	/**
 	 * Return the total affected rows after an executed statement.
 	 *
-	 * @return int
+	 * @return int Return the total affected rows after an executed statement. If none records was affected, the result will be 0
 	 */
 	public function rowCount()
 	{
@@ -322,13 +314,13 @@ class SimplePDO {
 	}
 
 	/**
-	 * Return the connection data.
+	 * Return the DSN connection string.
 	 *
-	 * @return array|string
+	 * @return string
 	 */
-	public function getConnectionData()
+	public function getDSN()
 	{
-		return $this->connectionData;
+		return $this->dsn;
 	}
 	
 	/**
