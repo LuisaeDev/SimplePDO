@@ -22,7 +22,7 @@ class SimplePDO {
 	/** @var PDOStatement Current PDO Statement */
 	private $pdoStm;
 
-	/** @var array|string Store the connection data */
+	/** @var array Store the connection data */
 	private $connectionData = null;
 
 	/** @var string DSN connection string */
@@ -34,30 +34,34 @@ class SimplePDO {
 	/**
 	 * Constructor.
 	 *
-	 * @param array  $connectionData Array with connection data values
-	 * @param string $dsn            Template of the DSN string. Variables expressed like $var will be replaced
+	 * @param array $connectionData Array with connection data values
+	 * @param bool  $throws         Define if PDO instance should throws PDOExeption
 	 *
 	 * @throws PDOException
 	 */
-	public function __construct(array $connectionData, string $dsnTemplate = '$driver:host=$host;port=$port;dbname=$dbname;charset=utf8')
+	public function __construct(array $connectionData, bool $throws = true)
 	{
 
 		// Merge the connection default data
 		$connectionData = array_merge([
-			'dbname'   => '',
-			'user'     => 'root',
-			'password' => '',
-			'driver'   => 'mysql',
-			'host'     => '127.0.0.1',
-			'port'     => '3306'
+			'dbname'       => '',
+			'user'         => 'root',
+			'password'     => '',
+			'driver'       => 'mysql',
+			'host'         => '127.0.0.1',
+			'port'         => '3306',
+			'dsn-template' => '$driver:host=$host;port=$port;dbname=$dbname;charset=utf8'
 		], $connectionData);
 		
 		// Build and save the DSN connection string
-		$dsnTemplate = str_replace('$driver', $connectionData['driver'], $dsnTemplate);
-		$dsnTemplate = str_replace('$host', $connectionData['host'], $dsnTemplate);
-		$dsnTemplate = str_replace('$port', $connectionData['port'], $dsnTemplate);
-		$dsnTemplate = str_replace('$dbname', $connectionData['dbname'], $dsnTemplate);
-		$this->dsn = $dsnTemplate;
+		$dsn = $connectionData['dsn-template'];
+		$dsn = str_replace('$driver', $connectionData['driver'], $dsn);
+		$dsn = str_replace('$host', $connectionData['host'], $dsn);
+		$dsn = str_replace('$port', $connectionData['port'], $dsn);
+		$dsn = str_replace('$dbname', $connectionData['dbname'], $dsn);
+		$dsn = str_replace('$user', $connectionData['user'], $dsn);
+		$dsn = str_replace('$password', $connectionData['password'], $dsn);
+		$this->dsn = $dsn;
 
 		// Create the PDO instance
 		$this->pdoInstance = new PDO($this->dsn, $connectionData['user'], $connectionData['password']);
@@ -67,14 +71,14 @@ class SimplePDO {
 		unset($connectionData['password']);
 		$this->connectionData = $connectionData;
 
-		// Enable reports and exceptions for the PDO instance
-		$this->pdoInstance->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		// Enable throw exceptions for the PDO instance
+		$this->pdoInstance->setAttribute(PDO::ATTR_ERRMODE, ($throws) ? PDO::ERRMODE_EXCEPTION : PDO::ERRMODE_SILENT);
 	}
 
 	/**
 	 * Magic __get method.
 	 */
-	public function __get($property)
+	public function __get(string $property)
 	{
 		if (is_callable(array($this, $method = 'get_' . $property))) {
 			return $this->$method();
@@ -88,9 +92,9 @@ class SimplePDO {
 	 *
 	 * Disable the 'autocommit' mode
 	 *
-	 * @return SimplePDO Self instance for chain
+	 * @return self Self instance for chain
 	 */
-	public function beginTransaction()
+	public function beginTransaction(): self
 	{
 		if ($this->autocommit == true) {
 			$this->autocommit = false;
@@ -104,9 +108,9 @@ class SimplePDO {
 	 *
 	 * Commit the transaction and enable 'autocommit' mode
 	 * 
-	 * @return SimplePDO Self instance for chain
+	 * @return self Self instance for chain
 	 */
-	public function commit()
+	public function commit(): self
 	{
 		if ($this->autocommit == false) {
 			$this->autocommit = true;
@@ -120,9 +124,9 @@ class SimplePDO {
 	 *
 	 * RollBack the transaction and enable 'autocommit' mode
 	 *
-	 * @return SimplePDO Self instance for chain
+	 * @return self Self instance for chain
 	 */
-	public function rollBack()
+	public function rollBack(): self
 	{
 		if ($this->autocommit == false) {
 			$this->autocommit = true;
@@ -136,7 +140,7 @@ class SimplePDO {
 	 *
 	 * @return bool
 	 */
-	public function isAutocommit()
+	public function isAutocommit(): bool
 	{
 		return $this->autocommit;
 	}
@@ -147,9 +151,11 @@ class SimplePDO {
 	 * @param string $sql    SQL statement
 	 * @param array  $params Params to bind
 	 *
-	 * @return SimplePDO Self instance for chain
+	 * @return self Self instance for chain
+	 *
+	 * @throws PDOException
 	 */
-	public function prepare(string $sql, array $params = array())
+	public function prepare(string $sql, array $params = array()): self
 	{
 
 		// Prepare and get the PDOStatement instance
@@ -170,9 +176,9 @@ class SimplePDO {
 	 * @param mixed  $value Parameter's value
 	 * @param string $type  Parameter's type
 	 *
-	 * @return SimplePDO Self instance for chain
+	 * @return self Self instance for chain
 	 */
-	public function bind(string $name, mixed $value, string $type)
+	public function bind(string $name, mixed $value, string $type): self
 	{
 
 		switch ($type) {
@@ -205,7 +211,7 @@ class SimplePDO {
 	 * 
 	 * @return PDOStatement|null
 	 */
-	public function getStatement()
+	public function getStatement(): PDOStatement|null
 	{
 		return $this->pdoStm;
 	}
@@ -213,11 +219,11 @@ class SimplePDO {
 	/**
 	 * Execute the current statement.
 	 *
-	 * @return SimplePDO Self instance for chain
+	 * @return self Self instance for chain
 	 * 
 	 * @throws PDOException
 	 */
-	public function execute()
+	public function execute(): self
 	{
 		if ((gettype($this->pdoStm) == 'object') && (method_exists($this->pdoStm, 'execute'))) {
 			$this->pdoStm->execute();
@@ -230,7 +236,7 @@ class SimplePDO {
 	 *
 	 * @return array|false
 	 */
-	public function fetch()
+	public function fetch(): array|false
 	{
 		if ((gettype($this->pdoStm) == 'object') && (method_exists($this->pdoStm, 'fetch'))) {
 			return $this->pdoStm->fetch(PDO::FETCH_ASSOC);
@@ -244,7 +250,7 @@ class SimplePDO {
 	 *
 	 * @return object|false
 	 */
-	public function fetchObject()
+	public function fetchObject(): object|false
 	{
 		if ((gettype($this->pdoStm) == 'object') && (method_exists($this->pdoStm, 'fetchObject'))) {
 			return $this->pdoStm->fetchObject();
@@ -258,7 +264,7 @@ class SimplePDO {
 	 *
 	 * @return array All results obtained
 	 */
-	public function fetchAll()
+	public function fetchAll(): array
 	{
 		if ((gettype($this->pdoStm) == 'object') && (method_exists($this->pdoStm, 'fetchAll'))) {
 			return $this->pdoStm->fetchAll(PDO::FETCH_ASSOC);
@@ -268,25 +274,43 @@ class SimplePDO {
 	}
 
 	/**
-	 * Return the last produced error.
+	 * Return the last error produced.
 	 *
-	 * @return array|null
+	 * @return array Array with information about the error produced
 	 */
-	public function errorInfo()
+	public function errorInfo(): array
 	{
-		if (method_exists($this->pdoInstance, 'errorInfo')) {
-			return $this->pdoInstance->errorInfo();
+		if (method_exists($this->pdoStm, 'errorInfo')) {
+			return $this->pdoStm->errorInfo();
 		} else {
-			return null;
+			return [
+				'00000',
+				null,
+				null
+			];
+		}
+	}
+
+	/**
+	 * Check if an error was produced.
+	 *
+	 * @return bool Confirm if exists an error
+	 */
+	public function errorExists(): bool
+	{
+		if (($this->errorinfo() !== null) && ($this->errorInfo()[1] !== null)) {
+			return true;
+		} else {
+			return false;
 		}
 	}
 
 	/**
 	 * Return the last inserted ID.
 	 *
-	 * @return mixed|null Last inserted ID or null
+	 * @return mixed Last inserted ID or null
 	 */
-	public function lastInsertId()
+	public function lastInsertId(): mixed
 	{
 		if (method_exists($this->pdoInstance, 'lastInsertId')) {
 			if ($this->pdoInstance->lastInsertId() == 0) {
@@ -304,7 +328,7 @@ class SimplePDO {
 	 *
 	 * @return int Return the total affected rows after an executed statement. If none records was affected, the result will be 0
 	 */
-	public function rowCount()
+	public function rowCount(): int
 	{
 		if (method_exists($this->pdoStm, 'rowCount')) {
 			return $this->pdoStm->rowCount();
@@ -318,7 +342,7 @@ class SimplePDO {
 	 *
 	 * @return string
 	 */
-	public function getDSN()
+	public function getDSN(): string
 	{
 		return $this->dsn;
 	}
@@ -326,52 +350,40 @@ class SimplePDO {
 	/**
 	 * 'dbname' property.
 	 *
-	 * @return string|null
+	 * @return string
 	 */
-	private function get_dbname()
+	private function get_dbname(): string
 	{
-		if (!is_array($this->connectionData)) {
-			return null;
-		}
 		return $this->connectionData['dbname'];
 	}
 
 	/**
 	 * 'driver' property.
 	 *
-	 * @return string|null
+	 * @return string
 	 */
-	private function get_driver()
+	private function get_driver(): string
 	{
-		if (!is_array($this->connectionData)) {
-			return null;
-		}
 		return $this->connectionData['driver'];
 	}
 
 	/**
 	 * 'host' property.
 	 *
-	 * @return string|null
+	 * @return string
 	 */
-	private function get_host()
+	private function get_host(): string
 	{
-		if (!is_array($this->connectionData)) {
-			return null;
-		}
 		return $this->connectionData['host'];
 	}
 
 	/**
 	 * 'port' property.
 	 *
-	 * @return int|null
+	 * @return int
 	 */
-	private function get_port()
+	private function get_port(): string
 	{
-		if (!is_array($this->connectionData)) {
-			return null;
-		}
 		return $this->connectionData['port'];
 	}
 }
