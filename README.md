@@ -1,38 +1,30 @@
-# SimplePDO
+# SimplePDO.php
 
-<aside>
-#️⃣ v1.0.0
+## A pretty simple and fancy class for handle PDO connections and statements
 
-</aside>
+The goal of this class is to simplify the usage of PDOConnections and PDOStatements instances through a single class. At the same time, adding a better programming experience by allowing the chaining methods.
 
-A pretty simple and fancy class for handle PDO connections and PDO statements using just one class.
-
-# Usage
+# Simple and efficient
 
 ```php
-<?php
+// Connection
+$sPDO = new SimplePDO([
+	'dbname'   => 'test',
+	'user'	 => 'root',
+	'password' => ''
+]);
 
-	require_once __DIR__ . '/vendor/autoload.php';
+// Prepare and execute a SQL statement
+$sPDO
+	->prepare('SELECT * FROM users WHERE id > :status', [
+		':status' => [1, 'int']
+	])
+	->execute();
 
-	use LuisaeDev\SimplePDO\SimplePDO;
-
-	$sPDO =  new SimplePDO([
-		'dbname'   => 'test',
-		'user'	 => 'root',
-		'password' => ''
-	]);
-
-	$sPDO
-		->prepare('SELECT * FROM users WHERE id > :status', [
-			':status' => [1, 'int']
-		])
-		->execute();
-
-	while ($row = $sPDO->fetch()) {
-		print_r($row);
-	}
-
-?>
+// Fetching the results
+while ($row = $sPDO->fetch()) {
+	print_r($row);
+}
 ```
 
 # Installation
@@ -43,37 +35,35 @@ You can install SimplePDO class via composer.
 composer require luisaedev/simple-pdo
 ```
 
-# Documentation
-
-See an [interactive documentation here](https://luisaedev.notion.site/SimplePDO-1047e4498f034354a7384012c93a0c69).
-
 # Requirements
 
-SimplePDO use PHP version 8.0 or higher and [PDO](https://www.php.net/manual/en/intro.pdo.php) extension .
+SimplePDO uses PHP version 8.0 or higher and [PDO](https://www.php.net/manual/en/intro.pdo.php) extension .
 
-# Constructor
+# Connection with database (Constructor)
 
 ```php
 use LuisaeDev\SimplePDO\SimplePDO;
 
+// Example of usage with mandatory connection data values
 $simplePDO = new SimplePDO([
-		'dbname'   => 'test',
-		'user'     => 'root',
-		'password' => ''
+	'dbname'   => 'test',
+	'user'     => 'root',
+	'password' => ''
 ]);
 ```
 
 ```php
 use LuisaeDev\SimplePDO\SimplePDO;
 
+// Example of usage with all connection data values allowed and $throws argument to prevent/allow throws PDOException
 $simplePDO = new SimplePDO([
-		'dbname'       => 'test',
-		'user'         => 'root',
-		'password'     => '',
-		'driver'       => 'mysql',
-		'host'         => '127.0.0.1',
-		'port'         => '3306',
-		'dsn-template' => '$driver:host=$host;port=$port;dbname=$dbname;charset=utf8'
+	'dbname'       => 'test',
+	'user'         => 'root',
+	'password'     => '',
+	'driver'       => 'mysql',
+	'host'         => '127.0.0.1',
+	'port'         => '3306',
+	'dsn-template' => '$driver:host=$host;port=$port;dbname=$dbname;charset=utf8'
 ], true);
 ```
 
@@ -82,13 +72,40 @@ $simplePDO = new SimplePDO([
 | Argument name | Value Type | Description | Default Value |
 | --- | --- | --- | --- |
 | $connectionData | array | Array with connection data values |  |
-| $throws | bool | Define if PDO instance should throws PDOExeption | true |
+| $throws | bool | Defines whether the contained PDO instance should throws PDOExeption | true |
 
 ### Throws
 
 | Exception Class | Code | Description |
 | --- | --- | --- |
 | PDOException |  | All PDO exceptions throws by PDO class |
+
+# Documentation
+
+## Methods
+
+- [beginTransaction()](#begintransaction)
+- [bind(name, value, type)](#bindname-value-type)
+- [commit()](#commit)
+- [errorExists()](#errorexists)
+- [errorInfo()](#errorinfo)
+- [execute()](#execute)
+- [fetch()](#fetch)
+- [fetchObject()](#fetchobject)
+- [getDSN()](#getdsn)
+- [getStatement()](#getstatement)
+- [isAutocommit()](#isautocommit)
+- [lastInsertId()](#lastinsertid)
+- [prepare(sql, params)](#preparesql-params--array)
+- [rollBack()](#rollback)
+- [rowCount()](#rowcount)
+
+## Properties
+
+- [dbname](#dbname)
+- [driver](#driver)
+- [host](#host)
+- [port](#port)
 
 # Methods
 
@@ -115,7 +132,7 @@ none
 | --- | --- |
 | self | Self instance for chain |
 
-## bind($name, $value, $type)
+## bind(name, value, type)
 
 Binds a parameter to the PDO statement.
 
@@ -196,9 +213,7 @@ none
 
 | Value Type | Description |
 | --- | --- |
-| array | Array with information about the error produced.
-More information see official documentation
-https://www.php.net/manual/en/pdo.errorinfo.php |
+| array | Array with information about the error produced. More information see official documentation. |
 
 ## execute()
 
@@ -369,9 +384,9 @@ none
 
 | Value Type | Description |
 | --- | --- |
-| mixed | Last inserted ID or null in caso that did not insert any record |
+| mixed | Last inserted ID or null in case that did not insert any record |
 
-## prepare($sql, $params = array())
+## prepare(sql, params = array())
 
 Prepares a PDO statement and binds the passed parameters.
 
@@ -425,7 +440,7 @@ none
 
 ## rowCount()
 
-Return the total affected rows after an executed statement
+Return the total affected rows after an executed statement.
 
 ```php
 $rowCount = $simplePDO
