@@ -80,6 +80,10 @@ $simplePDO = new SimplePDO([
 | --- | --- | --- |
 | PDOException |  | All PDO exceptions throws by PDO class |
 
+# Any bug?
+
+Please, don't hesitate to contact me if you found any error. You can write me at [dev@luisae.com](mailto:hi@luisae.com)
+
 # Documentation
 
 ## Methods
